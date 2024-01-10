@@ -2,11 +2,19 @@ package com.example.qrscan
 
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.example.qrscan.databinding.ActivityMainBinding
 import com.google.zxing.integration.android.IntentIntegrator
+import com.mikhaellopez.circularprogressbar.CircularProgressBar
 import org.json.JSONException
 
 
@@ -40,6 +48,44 @@ class MainActivity : AppCompatActivity() {
 //        }
     }
 
+    private fun performWritetoSheet(registrationID: String) {
+        Toast.makeText(this, "Writing to Sheet", Toast.LENGTH_LONG).show()
+        var url="https://script.google.com/macros/s/AKfycbwpPow-1HSyeNHwAsBRgEJ5faf1Ro7ebwCmevdrVp1XYoNBywfXzhWVfxwDNkfz29ZQmg/exec?"
+        url=url+"action=create&regID="+registrationID
+        val requestQueue = Volley.newRequestQueue(this)
+        val jsonRequest = JsonObjectRequest(Request.Method.GET,url, null,
+            Response.Listener { response ->
+                Log.d("Write Volley Success",response.toString())
+            },
+            Response.ErrorListener { error ->
+                // Handle errors
+                Log.d("Volley Error","Error fetching API" )
+            })
+        requestQueue.add(jsonRequest)
+    }
+
+    private fun performReadfromSheet( registrationID: String): String {
+        Toast.makeText(this, "Reading from Sheet", Toast.LENGTH_LONG).show()
+        var regCheckinStatus = ""
+        var url="https://script.google.com/macros/s/AKfycbwpPow-1HSyeNHwAsBRgEJ5faf1Ro7ebwCmevdrVp1XYoNBywfXzhWVfxwDNkfz29ZQmg/exec?"
+        url=url+"action=get&regID="+registrationID
+
+        val requestQueue = Volley.newRequestQueue(this)
+        val jsonRequest = JsonObjectRequest(Request.Method.GET,url, null,
+            Response.Listener { response ->
+                Log.d("Volley Success",response.toString())
+                val regUserName=response.getString("user_name")
+                regCheckinStatus=response.getString("chekin_status")
+                binding.userName.text = regUserName
+
+            },
+            Response.ErrorListener { error ->
+                // Handle errors
+                Log.d("Volley Error","Error fetching API" )
+            })
+        requestQueue.add(jsonRequest)
+        return regCheckinStatus
+    }
     private fun performAction() {
         // Code to perform action when button is clicked.
         qrScanIntegrator?.initiateScan()
@@ -62,14 +108,26 @@ class MainActivity : AppCompatActivity() {
                     //binding.siteName.text = obj.getString("site_name")
                     // Parse values and then show in UI.
                     var scannedData = result.contents.split("+").toTypedArray()
-                    binding.email.text = scannedData[0]
+                    binding.regID.text = scannedData[0]
                     binding.peopleCount.text = scannedData[1]
                     // Increment the counter
                     mCounter = mCounter + scannedData[1].toInt()
                     binding.countKey.text = mCounter.toString()
 
                     //post processing
+                    var registationid=binding.regID.text.toString()
+                    var checkStatus = performReadfromSheet(registationid)
                     //SendRequest().execute()
+                    if (checkStatus == "") {
+                        binding.checkinStatus.text = "NotCheckedIn"
+                        Toast.makeText(this, "User not checkedin", Toast.LENGTH_LONG).show()
+                        performWritetoSheet(registationid)
+
+                    } else if (checkStatus == "CheckedIn") {
+                        binding.checkinStatus.text = checkStatus
+                        Toast.makeText(this, "User is already checkedIn", Toast.LENGTH_LONG).show()
+
+                    }
 
 
                 } catch (e: JSONException) {
