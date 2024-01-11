@@ -2,19 +2,15 @@ package com.example.qrscan
 
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
-import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.qrscan.databinding.ActivityMainBinding
 import com.google.zxing.integration.android.IntentIntegrator
-import com.mikhaellopez.circularprogressbar.CircularProgressBar
 import org.json.JSONException
 
 
@@ -54,12 +50,12 @@ class MainActivity : AppCompatActivity() {
         url=url+"action=create&regID="+registrationID
         val requestQueue = Volley.newRequestQueue(this)
         val jsonRequest = JsonObjectRequest(Request.Method.GET,url, null,
-            Response.Listener { response ->
+            { response ->
                 Log.d("Write Volley Success",response.toString())
             },
-            Response.ErrorListener { error ->
+            { error ->
                 // Handle errors
-                Log.d("Volley Error","Error fetching API" )
+                Log.d("Volley Error","Error fetching API",error )
             })
         requestQueue.add(jsonRequest)
     }
@@ -72,16 +68,16 @@ class MainActivity : AppCompatActivity() {
 
         val requestQueue = Volley.newRequestQueue(this)
         val jsonRequest = JsonObjectRequest(Request.Method.GET,url, null,
-            Response.Listener { response ->
+            { response ->
                 Log.d("Volley Success",response.toString())
                 val regUserName=response.getString("user_name")
                 regCheckinStatus=response.getString("chekin_status")
                 binding.userName.text = regUserName
 
             },
-            Response.ErrorListener { error ->
+            { error ->
                 // Handle errors
-                Log.d("Volley Error","Error fetching API" )
+                Log.d("Volley Error","Error fetching API",error )
             })
         requestQueue.add(jsonRequest)
         return regCheckinStatus
@@ -91,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         qrScanIntegrator?.initiateScan()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
@@ -107,25 +104,25 @@ class MainActivity : AppCompatActivity() {
                     //binding.name.text = obj.getString("name")
                     //binding.siteName.text = obj.getString("site_name")
                     // Parse values and then show in UI.
-                    var scannedData = result.contents.split("+").toTypedArray()
+                    val scannedData = result.contents.split("+").toTypedArray()
                     binding.regID.text = scannedData[0]
                     binding.peopleCount.text = scannedData[1]
                     // Increment the counter
-                    mCounter = mCounter + scannedData[1].toInt()
+                    mCounter += scannedData[1].toInt()
                     binding.countKey.text = mCounter.toString()
 
                     //post processing
-                    var registationid=binding.regID.text.toString()
-                    var checkStatus = performReadfromSheet(registationid)
+                    val registationid=binding.regID.text.toString()
+                    val checkStatus = performReadfromSheet(registationid)
                     //SendRequest().execute()
-                    if (checkStatus == "") {
+                    if (checkStatus == "NotCheckedIn") {
                         binding.checkinStatus.text = "NotCheckedIn"
-                        Toast.makeText(this, "User not checkedin", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "User not checked in", Toast.LENGTH_LONG).show()
                         performWritetoSheet(registationid)
 
                     } else if (checkStatus == "CheckedIn") {
                         binding.checkinStatus.text = checkStatus
-                        Toast.makeText(this, "User is already checkedIn", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "User is already checked in", Toast.LENGTH_LONG).show()
 
                     }
 
